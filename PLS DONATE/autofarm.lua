@@ -25,7 +25,7 @@ else
         VirtualUser:ClickButton2(Vector2.new())
     end)
 end
--- wait(5)
+wait(5)
 
 --Variables
 local unclaimed = {}
