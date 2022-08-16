@@ -98,7 +98,7 @@ end
 --Function to fix slider
 local sliderInProgress = false;
 local function slider(value, whichSlider)
-    if sliderInProgress == true then
+    if sliderInProgress then
         return
     end
     sliderInProgress = true
