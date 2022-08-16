@@ -25,7 +25,7 @@ else
         VirtualUser:ClickButton2(Vector2.new())
     end)
 end
-wait(15)
+wait(5)
 
 --Variables
 local unclaimed = {}
@@ -301,6 +301,7 @@ local claimCount = #unclaimed
 local function boothclaim()
     wait(1)
     require(game.ReplicatedStorage.Remotes).Event("ClaimBooth"):InvokeServer(unclaimed[1])
+    wait(5)
     if not string.find(Players.LocalPlayer.PlayerGui.MapUIContainer.MapUI.BoothUI:GetChildren()[unclaimed[1]].Details.Owner.Text, game:GetService("Players").LocalPlayer.DisplayName) then
         error()
     end
