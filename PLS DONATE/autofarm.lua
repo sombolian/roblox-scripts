@@ -272,17 +272,40 @@ library:FormatWindows()
 settingsLock = false
 
 --Finds unclaimed booths
-for i, v in pairs(game:GetService("Players").LocalPlayer.PlayerGui.MapUIContainer.MapUI.BoothUI:GetChildren()) do
-    if (v.Details.Owner.Text == "unclaimed") then
-        table.insert(unclaimed, tonumber(string.match(tostring(v), "%d+")))
+local function findUnclaimed()
+    for i, v in pairs(game:GetService("Players").LocalPlayer.PlayerGui.MapUIContainer.MapUI.BoothUI:GetChildren()) do
+        if (v.Details.Owner.Text == "unclaimed") then
+            table.insert(unclaimed, tonumber(string.match(tostring(v), "%d+")))
+        end
+    end
+end
+if not pcall(findUnclaimed) then
+    while wait(5) do
+        local servers = {}
+        local req = httprequest({Url = "https://games.roblox.com/v1/games/8737602449/servers/Public?sortOrder=Desc&limit=100"})
+        local body = game:GetService('HttpService'):JSONDecode(req.Body)
+        if body and body.data then
+        	for i, v in next, body.data do
+    		    if type(v) == "table" and tonumber(v.playing) and tonumber(v.maxPlayers) and v.playing < v.maxPlayers and v.playing > 19 then
+    			    table.insert(servers, 1, v.id)
+    		    end 
+    	    end
+        end
+        if #servers > 0 then
+    	    game:GetService("TeleportService"):TeleportToPlaceInstance("8737602449", servers[math.random(1, #servers)], Players.LocalPlayer)
+        end
     end
 end
 local claimCount = #unclaimed
-
 --Claim booth function
-function boothclaim()
-    local claimevent = require(game.ReplicatedStorage.Remotes).Event("ClaimBooth")
-    claimevent:InvokeServer(unclaimed[1])
+local function boothclaim()
+    require(game.ReplicatedStorage.Remotes).Event("ClaimBooth"):InvokeServer(unclaimed[1])
+    if not string.find(Players.LocalPlayer.PlayerGui.MapUIContainer.MapUI.BoothUI:FindFirstChild(tostring("BoothUI".. unclaimed[1])).Details.Owner.Text, game:GetService("Players").LocalPlayer.DisplayName) then
+        wait(5)
+        if not string.find(Players.LocalPlayer.PlayerGui.MapUIContainer.MapUI.BoothUI:FindFirstChild(tostring("BoothUI".. unclaimed[1])).Details.Owner.Text, game:GetService("Players").LocalPlayer.DisplayName) then
+            error()
+        end
+    end
 end
 
 --Checks if booth claim fails
@@ -304,6 +327,7 @@ while not pcall(boothclaim) do
     		end
         end
     end
+    table.remove(unclaimed, 1)
     errCount = errCount + 1
 end
 
@@ -316,12 +340,19 @@ end)
 
 --Just in case you run into a bench
 while not atBooth do
-    wait(.25)
+    wait(0.1)
+    local function noclip()
+        for i,v in pairs(game:GetService("Players").LocalPlayer.Character:GetDescendants()) do
+            if v:IsA("BasePart") then
+                v.CanCollide = false
+            end
+        end
+    end
+    game:GetService("RunService").Stepped:Connect(noclip)
     if game.Players.LocalPlayer.Character.Humanoid:GetState() == Enum.HumanoidStateType.Seated then
         game.Players.LocalPlayer.Character.Humanoid.Jump = true
     end
 end
-
 --Turns charcter to face away from booth
 game.Players.LocalPlayer.Character:SetPrimaryPartCFrame(CFrame.new(game.Players.LocalPlayer.Character.HumanoidRootPart.Position, Vector3.new(40, 14, 101)))
 
