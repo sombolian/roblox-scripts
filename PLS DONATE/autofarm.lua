@@ -9,56 +9,29 @@ if game.PlaceId ~= 8737602449 then
 end
 
 --Anti-AFK
-for i, v in pairs(getconnections(game:GetService("Players").LocalPlayer.Idled)) do
-    v:Disable()
-end
-wait(5)
-
---Checks what executor is in use
-if string.find(identifyexecutor(), "Synapse X") then
-    syn.queue_on_teleport("loadstring(game:HttpGet('https://raw.githubusercontent.com/tzechco/roblox-scripts/main/PLS%20DONATE/autofarm.lua'))()")
+local connections = getconnections or get_signal_cons
+if connections then
+	for i,v in pairs(connections(game.Players.LocalPlayer.Idled)) do
+		if v["Disable"] then
+			v["Disable"](v)
+		elseif v["Disconnect"] then
+			v["Disconnect"](v)
+		end
+	end
 else
-    game.StarterGui:SetCore("SendNotification", {
-        Title = "Not using Synapse X",
-        Text = "Make sure this script is in the autoexec folder or it won't work properly",
-        Duration = 15
-    })
-end
-
---Discord Webhook Textbox
-local ScreenGui = Instance.new("ScreenGui")
-local TextBox = Instance.new("TextBox")
-ScreenGui.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui")
-ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-if isfile("PLSDONATE-WEBHOOK.txt") then
-    getgenv().webhook = game:GetService("HttpService"):JSONDecode(readfile("PLSDONATE-WEBHOOK.txt"))
-    TextBox.Text = getgenv().webhook
-else
-    TextBox.Text = "Discord Webhook URL"
-end
-TextBox.Parent = ScreenGui
-TextBox.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-TextBox.BackgroundTransparency = 0.500
-TextBox.ClipsDescendants = true
-TextBox.Position = UDim2.new(0.898658693, 0, 0.963724315, 0)
-TextBox.Size = UDim2.new(0, 136, 0, 30)
-TextBox.Font = Enum.Font.SourceSans
-TextBox.TextColor3 = Color3.fromRGB(0, 0, 0)
-TextBox.TextSize = 14.000
-local function getText()
-    local script = Instance.new("LocalScript", TextBox)
-    local text = script.Parent
-    text.FocusLost:Connect(function()
-        getgenv().webhook = text.Text
-        writefile("PLSDONATE-WEBHOOK.txt", game:GetService("HttpService"):JSONEncode(getgenv().webhook))
+    game.Players.LocalPlayer.Idled:Connect(function()
+        local VirtualUser = game:GetService("VirtualUser")
+        VirtualUser:CaptureController()
+        VirtualUser:ClickButton2(Vector2.new())
     end)
 end
-coroutine.wrap(getText)()
+wait(5)
 
 --Variables
 local unclaimed = {}
 local counter
 local donation
+local boothText
 local errCount = 0
 local booths = {
     ["1"] = "72, 4, 36",
@@ -90,6 +63,213 @@ local booths = {
     ["27"] = "83, 4, 42",
     ["28"] = "-8, 4, 151"
 }
+local queueonteleport = (syn and syn.queue_on_teleport) or queue_on_teleport or (fluxus and fluxus.queue_on_teleport)
+local httprequest = (syn and syn.request) or http and http.request or http_request or (fluxus and fluxus.request) or request
+local Players = game:GetService("Players")
+queueonteleport("loadstring(game:HttpGet('https://raw.githubusercontent.com/tzechco/roblox-scripts/main/PLS%20DONATE/autofarm.lua'))()")
+local library = loadstring(game:HttpGet("https://pastebin.com/raw/QYnVhBVd"))()
+
+--Load Settings
+if isfile("plsdonate-settings.txt") then
+    getgenv().settings = game:GetService('HttpService'):JSONDecode(readfile('plsdonate-settings.txt'))
+else
+    getgenv().settings = {
+        textUpdateToggle = true,
+        textUpdateDelay = 30,
+        serverHopToggle = true,
+        serverHopDelay = 30,
+        hexBox = "#32CD32",
+        goalBox = 5,
+        webhookToggle = false,
+        webhookBox = ""
+    }
+    writefile('plsdonate-settings.txt', game:GetService('HttpService'):JSONEncode(getgenv().settings))
+end
+
+--Save Settings
+local settingsLock = true
+local function saveSettings()
+    if settingsLock == false then
+        print('Settings saved.')
+        writefile('plsdonate-settings.txt', game:GetService('HttpService'):JSONEncode(getgenv().settings))
+    end
+end
+
+--Function to fix slider
+local sliderInProgress = false;
+local function slider(value, whichSlider)
+    if sliderInProgress == true then
+        return
+    end
+    sliderInProgress = true
+    wait(5)
+    if whichSlider == "serverHopDelay" then
+        if getgenv().settings.serverHopDelay == value then
+            print(getgenv().settings.serverHopDelay)
+            print(value)
+            saveSettings()
+            sliderInProgress = false;
+        else
+            sliderInProgress = false;
+            return slider(getgenv().settings.serverHopDelay, "serverHopDelay")
+        end
+    elseif whichSlider == "textUpdateDelay" then
+        if getgenv().settings.textUpdateDelay == value then
+            saveSettings()
+            sliderInProgress = false;
+        else
+            sliderInProgress = false;
+            return slider(getgenv().settings.textUpdateDelay, "textUpdateDelay")
+        end
+    end
+end
+
+--Booth update function
+function update()
+    local text
+    local Raised = Players.LocalPlayer.leaderstats.Raised
+    
+    --Checks if you have 1000+ robux raised
+    --4 digit numbers are censored so they will be shortened
+    if Raised.Value > 999 then
+        text = tostring(math.ceil(tonumber(Raised.Value + 1) / 100) * 100)
+        text = string.format("%.1fk", text / 10 ^ 3)
+        --Booth text when 1000+ robux raised
+        boothText = tostring('<font color="'.. getgenv().settings.hexBox.. '">GOAL: ' .. text .. "</font>")
+    else
+        --Booth text when under 1000 robux raised
+        text = tostring(Raised.Value + getgenv().settings.goalBox)
+        boothText = tostring('<font color="'.. getgenv().settings.hexBox.. '">GOAL: ' .. Raised.value .. " / " .. text .. "</font>")
+    end
+    --Updates the booth text
+    require(game.ReplicatedStorage.Remotes).Event("SetBoothText"):FireServer(boothText, "booth")
+end
+
+
+--GUI
+local Window = library:AddWindow("PLS DONATE",
+{
+    main_color = Color3.fromRGB(0, 128, 0),
+    min_size = Vector2.new(300, 400),
+    toggle_key = Enum.KeyCode.RightShift,
+    can_resize = true
+})
+local mainTab = Window:AddTab("Main")
+local webhookTab = Window:AddTab("Webhook")
+local textUpdateToggle = mainTab:AddSwitch("Text Update", function(bool)
+    getgenv().settings.textUpdateToggle = bool
+    saveSettings()
+    if bool then
+        wait(1)
+        update()
+    end
+end)
+textUpdateToggle:Set(getgenv().settings.textUpdateToggle)
+local textUpdateDelay = mainTab:AddSlider("Text Update Delay (S)", function(x) 
+    if settingsLock then
+       return 
+    end
+    getgenv().settings.textUpdateDelay = x
+    coroutine.wrap(slider)(getgenv().settings.textUpdateDelay, "textUpdateDelay")
+end,
+{
+    ["min"] = 0,
+    ["max"] = 120
+})
+textUpdateDelay:Set((getgenv().settings.textUpdateDelay / 120) * 100)
+local serverHopToggle = mainTab:AddSwitch("Auto Server Hop", function(bool)
+    getgenv().settings.serverHopToggle = bool
+    saveSettings()
+end)
+serverHopToggle:Set(getgenv().settings.serverHopToggle)
+local serverHopDelay = mainTab:AddSlider("Server Hop Delay (M)", function(x)
+    if settingsLock then
+       return 
+    end
+    getgenv().settings.serverHopDelay = x
+    coroutine.wrap(slider)(getgenv().settings.serverHopDelay, "serverHopDelay")
+end,
+{
+    ["min"] = 1,
+    ["max"] = 120
+})
+serverHopDelay:Set((getgenv().settings.serverHopDelay / 120) * 100)
+local hexBox = mainTab:AddTextBox("Text Color (HEX)", function(text)
+    local success = pcall(function()
+	    return Color3.fromHex(text)
+    end)
+    if success and string.find(text, "#") then
+        getgenv().settings.hexBox = text
+        saveSettings()
+        if getgenv().settings.textUpdateToggle then
+            wait(1)
+            update()
+        end
+    end
+end,
+{
+    ["clear"] = false
+})
+hexBox.Text = getgenv().settings.hexBox
+local goalBox = mainTab:AddTextBox("Goal Increase", function(text)
+    if tonumber(text) then
+        getgenv().settings.goalBox = text
+        saveSettings()
+        if getgenv().settings.textUpdateToggle then
+            wait(1)
+            update()
+        end
+    end
+end,
+{
+    ["clear"] = false
+})
+goalBox.Text = getgenv().settings.goalBox
+mainTab:AddButton("Server Hop", function()
+    while wait(5) do
+		local servers = {}
+		local req = httprequest({Url = "https://games.roblox.com/v1/games/8737602449/servers/Public?sortOrder=Desc&limit=100"})
+		local body = game:GetService('HttpService'):JSONDecode(req.Body)
+		if body and body.data then
+			for i, v in next, body.data do
+				if type(v) == "table" and tonumber(v.playing) and tonumber(v.maxPlayers) and v.playing < v.maxPlayers and v.playing > 19 then
+					table.insert(servers, 1, v.id)
+				end 
+			end
+		end
+		if #servers > 0 then
+			game:GetService("TeleportService"):TeleportToPlaceInstance("8737602449", servers[math.random(1, #servers)], Players.LocalPlayer)
+		end
+    end
+end)
+local webhookToggle = webhookTab:AddSwitch("Discord Webhook Notifications", function(bool)
+    getgenv().settings.webhookToggle = bool
+    saveSettings()
+end)
+webhookToggle:Set(getgenv().settings.webhookToggle)
+local webhookBox = webhookTab:AddTextBox("Webhook URL", function(text)
+    if string.find(text, "https://discord.com/api/webhooks/") then
+        getgenv().settings.webhookBox = text;
+        saveSettings()
+    end
+end,
+{
+    ["clear"] = false
+})
+webhookBox.Text = getgenv().settings.webhookBox
+webhookTab:AddButton("Test Message", function()
+    if getgenv().settings.webhookToggle and getgenv().settings.webhookBox then
+        httprequest({
+            Url = getgenv().settings.webhookBox,
+            Body = game:GetService("HttpService"):JSONEncode({["content"] = "Test"}),
+            Method = "POST",
+            Headers = {["content-type"] = "application/json"}
+        })
+    end
+end)
+mainTab:Show()
+library:FormatWindows()
+settingsLock = false
 
 --Finds unclaimed booths
 for i, v in pairs(game:GetService("Players").LocalPlayer.PlayerGui.MapUIContainer.MapUI.BoothUI:GetChildren()) do
@@ -108,11 +288,20 @@ end
 --Checks if booth claim fails
 while not pcall(boothclaim) do
     if errCount >= claimCount then
-        local Servers = game.HttpService:JSONDecode(game:HttpGet("https://games.roblox.com/v1/games/8737602449/servers/Public?sortOrder=Desc&limit=100"))
-        for i, v in pairs(Servers.data) do
-            if v.playing > 19 and v.playing < 27 then
-                game:GetService("TeleportService"):TeleportToPlaceInstance(game.PlaceId, v.id)
-            end
+        while wait(5) do
+    		local servers = {}
+    		local req = httprequest({Url = "https://games.roblox.com/v1/games/8737602449/servers/Public?sortOrder=Desc&limit=100"})
+    		local body = game:GetService('HttpService'):JSONDecode(req.Body)
+    		if body and body.data then
+    			for i, v in next, body.data do
+    				if type(v) == "table" and tonumber(v.playing) and tonumber(v.maxPlayers) and v.playing < v.maxPlayers and v.playing > 19 then
+    					table.insert(servers, 1, v.id)
+    				end 
+    			end
+    		end
+    		if #servers > 0 then
+    			game:GetService("TeleportService"):TeleportToPlaceInstance("8737602449", servers[math.random(1, #servers)], Players.LocalPlayer)
+    		end
         end
     end
     errCount = errCount + 1
@@ -136,53 +325,40 @@ end
 --Turns charcter to face away from booth
 game.Players.LocalPlayer.Character:SetPrimaryPartCFrame(CFrame.new(game.Players.LocalPlayer.Character.HumanoidRootPart.Position, Vector3.new(40, 14, 101)))
 
---Booth text
+--Waits for donations
 while true do
     counter = 0
-    local Players = game:GetService("Players")
-    local Raised = Players.LocalPlayer.leaderstats.Raised
-    local boothText
-    function update(text)
-        --Checks if you have 1000+ robux raised
-        --4 digit numbers are censored so they will be shortened
-        if Raised.Value > 999 then
-            text = string.format("%.1fk", text / 10 ^ 3)
-            --Booth text when 1000+ robux raised
-            boothText = tostring('<font color="#32cd32">GOAL: ' .. text .. "</font>")
-        else
-            --Booth text when under 1000 robux raised
-            boothText = tostring('<font color="#32cd32">GOAL: ' .. Raised.value .. " / " .. text .. "</font>")
-        end
-        --Updates the booth text
-        require(game.ReplicatedStorage.Remotes).Event("SetBoothText"):FireServer(boothText, "booth")
+    if getgenv().settings.textUpdateToggle then
+        update()
     end
-    --More checks for 1000+ raised
-    if Raised.Value > 999 then
-        update(tostring(math.ceil(tonumber(Raised.Value + 1) / 100) * 100))
-    else
-        update(tostring(Raised.Value + 5))
-    end
-
-    --Waits for a donation
     local RaisedC = Players.LocalPlayer.leaderstats.Raised.value
     while (Players.LocalPlayer.leaderstats.Raised.value == RaisedC) do
         wait(1)
         counter = counter + 1
         --Server hops after 1800 seconds (30 minutes)
-        if counter >= 1800 then
-            --Random wait time in case of interference from alts
-            wait(math.random(1, 60))
-            local Servers = game.HttpService:JSONDecode(game:HttpGet("https://games.roblox.com/v1/games/8737602449/servers/Public?sortOrder=Desc&limit=100"))
-            for i, v in pairs(Servers.data) do
-                if v.playing > 19 and v.playing < 27 then
-                    game:GetService("TeleportService"):TeleportToPlaceInstance(game.PlaceId, v.id)
-                end
+        if getgenv().settings.serverHopToggle then
+            if counter >= (getgenv().settings.serverHopDelay * 60) then
+                --Random wait time in case of interference from alts
+                wait(math.random(1, 60))
+		        local servers = {}
+		        local req = httprequest({Url = "https://games.roblox.com/v1/games/8737602449/servers/Public?sortOrder=Desc&limit=100"})
+        		local body = game:GetService('HttpService'):JSONDecode(req.Body)
+		        if body and body.data then
+			        for i, v in next, body.data do
+				        if type(v) == "table" and tonumber(v.playing) and tonumber(v.maxPlayers) and v.playing < v.maxPlayers and v.playing > 19 then
+					        table.insert(servers, 1, v.id)
+				        end 
+			        end
+		        end
+		        if #servers > 0 then
+        			game:GetService("TeleportService"):TeleportToPlaceInstance("8737602449", servers[math.random(1, #servers)], Players.LocalPlayer)
+		        end
             end
         end
     end
 
     --Checks for Discord Webhook
-    if getgenv().webhook then
+    if getgenv().settings.webhookToggle and getgenv().settings.webhookBox then
         local LogService = Game:GetService("LogService")
         local logs = LogService:GetLogHistory()
         local donation
@@ -194,15 +370,14 @@ while true do
         end
 
         --Sends to webhook
-        local request = http_request or request or HttpPost or syn.request
-        request({
-            Url = getgenv().webhook,
+        httprequest({
+            Url = getgenv().settings.webhookBox,
             Body = game:GetService("HttpService"):JSONEncode({["content"] = donation}),
             Method = "POST",
             Headers = {["content-type"] = "application/json"}
         })
     end
 
-    --30 second wait so the booth doesn't update instantly
-    wait(30)
+    --Text update delay
+    wait(getgenv().settings.textUpdateDelay)
 end
