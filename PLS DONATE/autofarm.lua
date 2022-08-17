@@ -170,8 +170,8 @@ end
 
 local function begging()
     while getgenv().settings.autoBeg do
-        wait(getgenv().settings.begDelay)
         game.ReplicatedStorage.DefaultChatSystemChatEvents.SayMessageRequest:FireServer(getgenv().settings.begMessage[math.random(#getgenv().settings.begMessage)],"All")
+	wait(getgenv().settings.begDelay)
     end
 end
 
