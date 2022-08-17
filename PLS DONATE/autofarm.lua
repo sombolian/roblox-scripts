@@ -70,26 +70,28 @@ queueonteleport("loadstring(game:HttpGet('https://raw.githubusercontent.com/tzec
 local library = loadstring(game:HttpGet("https://raw.githubusercontent.com/tzechco/roblox-scripts/main/UI/ui-engine-v2.lua"))()
 getgenv().settings = {}
 --Load Settings
-if isfile("plsdonate-settings.txt") then
-    getgenv().settings = game:GetService('HttpService'):JSONDecode(readfile('plsdonate-settings.txt'))
+if isfile("plsdonatesettings.txt") then
+    getgenv().settings = game:GetService('HttpService'):JSONDecode(readfile('plsdonatesettings.txt'))
 end
 local sNames = {"textUpdateToggle", "textUpdateDelay", "serverHopToggle", "serverHopDelay", "hexBox", "goalBox", "webhookToggle", "webhookBox", "danceToggle", "thanksMessage", "signToggle", "customBoothText", "signUpdateToggle", "signText", "signHexBox", "autoThanks", "autoBeg", "begMessage", "begDelay"}
+local sValues = {true, 30, true, 30, "#32CD32", 5, false, "", false, {"Thank you", "Thanks!", "ty :)", "tysm!"}, false, "GOAL: $C / $G", false, "your text here", "#ffffff", true, false, {"Please donate", "I'm so close to my goal!", "donate to me", "please"}, 300}
 if #getgenv().settings ~= sNames then
-    local sValues = {true, 30, true, 30, "#32CD32", 5, false, "", false, {"Thank you", "Thanks!", "ty :)", "tysm!"}, false, "GOAL: $C / $G", false, "your text here", "#ffffff", 5, true, false, {"Please donate", "I'm so close to my goal!", "donate to me", "please"}, 300}
     for i, v in ipairs(sNames) do
         if getgenv().settings[v] == nil then
             getgenv().settings[v] = sValues[i]
         end
     end
-    writefile('plsdonate-settings.txt', game:GetService('HttpService'):JSONEncode(getgenv().settings))
+    writefile('plsdonatesettings.txt', game:GetService('HttpService'):JSONEncode(getgenv().settings))
 end
+print(#sNames)
+print(#sValues)
 
 --Save Settings
 local settingsLock = true
 local function saveSettings()
     if settingsLock == false then
         print('Settings saved.')
-        writefile('plsdonate-settings.txt', game:GetService('HttpService'):JSONEncode(getgenv().settings))
+        writefile('plsdonatesettings.txt', game:GetService('HttpService'):JSONEncode(getgenv().settings))
     end
 end
 
