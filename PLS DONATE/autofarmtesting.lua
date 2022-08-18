@@ -2,7 +2,10 @@
 repeat
     wait()
 until game:IsLoaded()
-
+if string.find(identifyexecutor(), "Fluxus") then
+	print(identifyexecutor())
+	wait(10)	
+end
 --Stops script if on a different game
 if game.PlaceId ~= 8737602449 then
     return
@@ -67,7 +70,6 @@ local booths = {
 local queueonteleport = (syn and syn.queue_on_teleport) or queue_on_teleport or (fluxus and fluxus.queue_on_teleport)
 local httprequest = (syn and syn.request) or http and http.request or http_request or (fluxus and fluxus.request) or request
 local httpservice = game:GetService('HttpService')
-queueonteleport("wait(10)")
 queueonteleport("loadstring(game:HttpGet('https://raw.githubusercontent.com/tzechco/roblox-scripts/main/PLS%20DONATE/autofarmtesting.lua'))()")
 local library = loadstring(game:HttpGet("https://raw.githubusercontent.com/tzechco/roblox-scripts/main/UI/ui-engine-v2.lua"))()
 getgenv().settings = {}
