@@ -1,4 +1,4 @@
---Wait until game loads
+--Waitt until game loads
 repeat
     wait()
 until game:IsLoaded()
