@@ -536,37 +536,21 @@ end
 require(game.ReplicatedStorage.Remotes).Event("RefreshItems"):InvokeServer()
 
 --Walks to booth
-local path = game:GetService("PathfindingService"):CreatePath()
+Players.LocalPlayer.Character.Humanoid:MoveTo(Vector3.new(booths[tostring(unclaimed[1])]:match("(.+), (.+), (.+)")))
 local atBooth = false
-local function followPath(destination)
-    local waypoints
-    local nextWaypointIndex
-    local reachedConnection
-	local success, errorMessage = pcall(function()
-		path:ComputeAsync(Players.LocalPlayer.Character.PrimaryPart.Position, destination)
-	end)
-	if success and path.Status == Enum.PathStatus.Success then
-		waypoints = path:GetWaypoints()
-		if not reachedConnection then
-			reachedConnection = Players.LocalPlayer.Character.Humanoid.MoveToFinished:Connect(function(reached)
-				if reached and nextWaypointIndex < #waypoints then
-					nextWaypointIndex = nextWaypointIndex + 1
-					Players.LocalPlayer.Character.Humanoid:MoveTo(waypoints[nextWaypointIndex].Position)
-			    else
-			        atBooth = true
-					reachedConnection:Disconnect()
-				end
-			end)
-		end
-		nextWaypointIndex = 2
-		Players.LocalPlayer.Character.Humanoid:MoveTo(waypoints[nextWaypointIndex].Position)
-	end
-end
-followPath(Vector3.new(booths[tostring(unclaimed[1])]:match("(.+), (.+), (.+)")))
-local Controls = require(Players.LocalPlayer.PlayerScripts:WaitForChild("PlayerModule")):GetControls()
-Controls:Disable()
+Players.LocalPlayer.Character.Humanoid.MoveToFinished:Connect(function(reached)
+    atBooth = true
+end)
 while not atBooth do
     wait(0.1)
+    local function noclip()
+        for i,v in pairs(Players.LocalPlayer.Character:GetDescendants()) do
+            if v:IsA("BasePart") then
+                v.CanCollide = false
+            end
+        end
+    end
+    game:GetService("RunService").Stepped:Connect(noclip)
     if Players.LocalPlayer.Character.Humanoid:GetState() == Enum.HumanoidStateType.Seated then
         Players.LocalPlayer.Character.Humanoid.Jump = true
     end
