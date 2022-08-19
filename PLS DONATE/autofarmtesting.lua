@@ -2,10 +2,7 @@
 repeat
     wait()
 until game:IsLoaded()
-if string.find(identifyexecutor(), "Fluxus") then
-	print(identifyexecutor())
-	wait(10)	
-end
+
 --Stops script if on a different game
 if game.PlaceId ~= 8737602449 then
     return
@@ -180,21 +177,22 @@ local function begging()
 end
 
 local function serverHop()
-    while wait(5) do
-        local servers = {}
-        local req = httprequest({Url = "https://games.roblox.com/v1/games/8737602449/servers/Public?sortOrder=Desc&limit=100"})
-    	local body = httpservice:JSONDecode(req.Body)
-        if body and body.data then
-            for i, v in next, body.data do
-    	        if type(v) == "table" and tonumber(v.playing) and tonumber(v.maxPlayers) and v.playing < v.maxPlayers and v.playing > 19 then
-    		        table.insert(servers, 1, v.id)
-    	        end 
-            end
-        end
-        if #servers > 0 then
-    		game:GetService("TeleportService"):TeleportToPlaceInstance("8737602449", servers[math.random(1, #servers)], Players.LocalPlayer)
+    local servers = {}
+    local req = httprequest({Url = "https://games.roblox.com/v1/games/8737602449/servers/Public?sortOrder=Desc&limit=100"})
+    local body = httpservice:JSONDecode(req.Body)
+    if body and body.data then
+        for i, v in next, body.data do
+            if type(v) == "table" and tonumber(v.playing) and tonumber(v.maxPlayers) and v.playing < v.maxPlayers and v.playing > 19 then
+                table.insert(servers, 1, v.id)
+            end 
         end
     end
+    if #servers > 0 then
+    	game:GetService("TeleportService"):TeleportToPlaceInstance("8737602449", servers[math.random(1, #servers)], Players.LocalPlayer)
+    end
+    game:GetService("TeleportService").TeleportInitFailed:Connect(function()
+        serverHop()
+    end)
 end
 
 local function webhook(msg)
@@ -515,6 +513,7 @@ local function findUnclaimed()
     end
 end
 if not pcall(findUnclaimed) then
+    writefile('plsdonatesettings.txt', "findUnclaimed")
     serverHop()
 end
 local claimCount = #unclaimed
@@ -531,6 +530,7 @@ end
 --Checks if booth claim fails
 while not pcall(boothclaim) do
     if errCount >= claimCount then
+        writefile('plsdonatesettings.txt', "boothclaim")
         serverHop()
     end
     table.remove(unclaimed, 1)
@@ -609,6 +609,7 @@ while wait(1) do
     counter = counter + 1
     if getgenv().settings.serverHopToggle then
         if counter >= (getgenv().settings.serverHopDelay * 60) then
+                writefile('plsdonatesettings.txt', "serverhopping")
             serverHop()
         end
     end
